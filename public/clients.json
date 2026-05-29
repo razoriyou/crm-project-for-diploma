@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "name": "Алексей Иванов",
+    "email": "a.ivanov@techprom.kz",
+    "phone": "+7 701 234-56-78",
+    "company": "ТехноПром",
+    "status": "active",
+    "createdAt": "2025-01-15"
+  },
+  {
+    "id": 2,
+    "name": "Мария Сейткали",
+    "email": "m.seitkali@globalfinance.kz",
+    "phone": "+7 707 891-23-45",
+    "company": "Global Finance",
+    "status": "active",
+    "createdAt": "2025-01-22"
+  },
+  {
+    "id": 3,
+    "name": "Дмитрий Ким",
+    "email": "d.kim@agrohub.kz",
+    "phone": "+7 705 567-89-01",
+    "company": "AgroHub",
+    "status": "inactive",
+    "createdAt": "2025-02-03"
+  },
+  {
+    "id": 4,
+    "name": "Айгерим Нурланова",
+    "email": "a.nurlanova@smartlogix.kz",
+    "phone": "+7 702 345-67-89",
+    "company": "SmartLogix",
+    "status": "active",
+    "createdAt": "2025-02-17"
+  },
+  {
+    "id": 5,
+    "name": "Сергей Волков",
+    "email": "s.volkov@medikaz.kz",
+    "phone": "+7 771 456-78-90",
+    "company": "МедиКаз",
+    "status": "active",
+    "createdAt": "2025-03-05"
+  },
+  {
+    "id": 6,
+    "name": "Жанна Бекова",
+    "email": "zh.bekova@ecomart.kz",
+    "phone": "+7 778 678-90-12",
+    "company": "EcoMart",
+    "status": "inactive",
+    "createdAt": "2025-03-14"
+  },
+  {
+    "id": 7,
+    "name": "Руслан Абенов",
+    "email": "r.abenov@digitalstep.kz",
+    "phone": "+7 700 789-01-23",
+    "company": "DigitalStep",
+    "status": "active",
+    "createdAt": "2025-04-01"
+  },
+  {
+    "id": 8,
+    "name": "Татьяна Морозова",
+    "email": "t.morozova@kaspihold.kz",
+    "phone": "+7 747 890-12-34",
+    "company": "КаспиХолдинг",
+    "status": "active",
+    "createdAt": "2025-04-19"
+  },
+  {
+    "id": 9,
+    "name": "Бауыржан Сатыбалдин",
+    "email": "b.sat@primedev.kz",
+    "phone": "+7 708 901-23-45",
+    "company": "PrimeDev",
+    "status": "active",
+    "createdAt": "2025-05-02"
+  },
+  {
+    "id": 10,
+    "name": "Наталья Захарова",
+    "email": "n.zaharova@transline.kz",
+    "phone": "+7 776 012-34-56",
+    "company": "ТрансЛайн",
+    "status": "inactive",
+    "createdAt": "2025-05-21"
+  }
+]

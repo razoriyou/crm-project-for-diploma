@@ -1,0 +1,823 @@
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: var(--color-background-primary);
+    --bg2: var(--color-background-secondary);
+    --bg3: var(--color-background-tertiary);
+    --txt: var(--color-text-primary);
+    --txt2: var(--color-text-secondary);
+    --txt3: var(--color-text-tertiary);
+    --border: var(--color-border-tertiary);
+    --border2: var(--color-border-secondary);
+    --rad: var(--border-radius-md);
+    --radlg: var(--border-radius-lg);
+    --c1: #1D9E75;
+    --c1l: #E1F5EE;
+    --c1d: #085041;
+    --cdanger: #E24B4A;
+    --cdangerl: #FCEBEB;
+    --camber: #BA7517;
+    --camberl: #FAEEDA;
+    --cblue: #378ADD;
+    --cbluel: #E6F1FB;
+    --cpurple: #7F77DD;
+    --cpurplel: #EEEDFE;
+  }
+  body { font-family: var(--font-sans, system-ui); background: transparent; }
+
+  .app {
+    width: 375px;
+    margin: 0 auto;
+    background: var(--bg3);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 0.5px solid var(--border);
+    min-height: 640px;
+    position: relative;
+  }
+
+  .screen { display: none; flex-direction: column; height: 640px; }
+  .screen.active { display: flex; }
+
+  .status-bar {
+    background: var(--bg);
+    padding: 8px 20px 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--txt2);
+    border-bottom: 0.5px solid var(--border);
+  }
+
+  .header {
+    background: var(--bg);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .header-title { font-size: 16px; font-weight: 500; flex: 1; }
+  .header-back {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--bg2); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--txt2);
+  }
+  .header-action {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--c1l); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--c1d);
+  }
+
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    scrollbar-width: none;
+  }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  .nav-bar {
+    background: var(--bg);
+    border-top: 0.5px solid var(--border);
+    display: flex;
+    padding: 8px 0 12px;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 3px;
+    background: none; border: none; cursor: pointer;
+    color: var(--txt3); font-size: 10px;
+    transition: color 0.15s;
+  }
+  .nav-btn.active { color: var(--c1); }
+  .nav-btn i { font-size: 20px; }
+
+  .summary-card {
+    background: var(--c1);
+    border-radius: var(--radlg);
+    padding: 20px;
+    color: white;
+    margin-bottom: 16px;
+  }
+  .summary-label { font-size: 12px; opacity: 0.8; margin-bottom: 4px; }
+  .summary-amount { font-size: 32px; font-weight: 500; }
+  .summary-sub { font-size: 13px; opacity: 0.75; margin-top: 4px; }
+  .summary-row { display: flex; gap: 12px; margin-top: 16px; }
+  .summary-mini {
+    flex: 1; background: rgba(255,255,255,0.15);
+    border-radius: var(--rad); padding: 10px;
+  }
+  .summary-mini .lbl { font-size: 11px; opacity: 0.8; }
+  .summary-mini .val { font-size: 16px; font-weight: 500; margin-top: 2px; }
+
+  .section-title {
+    font-size: 13px; font-weight: 500;
+    color: var(--txt2);
+    text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 10px;
+  }
+
+  .expense-item {
+    background: var(--bg);
+    border-radius: var(--radlg);
+    border: 0.5px solid var(--border);
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .expense-item:active { border-color: var(--border2); }
+  .cat-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .expense-info { flex: 1; min-width: 0; }
+  .expense-name { font-size: 14px; font-weight: 500; }
+  .expense-meta { font-size: 12px; color: var(--txt2); margin-top: 1px; }
+  .expense-amount { font-size: 15px; font-weight: 500; color: var(--cdanger); }
+
+  .budget-item {
+    background: var(--bg);
+    border-radius: var(--radlg);
+    border: 0.5px solid var(--border);
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  .budget-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .budget-info { flex: 1; }
+  .budget-name { font-size: 14px; font-weight: 500; }
+  .budget-vals { font-size: 12px; color: var(--txt2); margin-top: 2px; }
+  .progress-bar {
+    height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; border-radius: 3px;
+    transition: width 0.3s;
+  }
+
+  .stats-card {
+    background: var(--bg);
+    border-radius: var(--radlg);
+    border: 0.5px solid var(--border);
+    padding: 14px; margin-bottom: 12px;
+  }
+  .chart-bars {
+    display: flex; align-items: flex-end;
+    gap: 6px; height: 80px; margin: 12px 0 6px;
+  }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar {
+    width: 100%; border-radius: 4px 4px 0 0;
+    transition: height 0.3s;
+    min-height: 4px;
+  }
+  .bar-lbl { font-size: 10px; color: var(--txt3); }
+
+  .pie-wrap {
+    display: flex; align-items: center; gap: 16px; margin-top: 12px;
+  }
+  .pie-chart { flex-shrink: 0; }
+  .legend { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-name { flex: 1; color: var(--txt2); }
+  .legend-pct { font-weight: 500; }
+
+  .fab {
+    position: absolute; bottom: 72px; right: 20px;
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--c1); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 24px; box-shadow: 0 2px 8px rgba(29,158,117,0.3);
+    transition: transform 0.15s;
+  }
+  .fab:active { transform: scale(0.94); }
+
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 12px; color: var(--txt2); margin-bottom: 5px; }
+  .form-input {
+    width: 100%; padding: 10px 12px;
+    background: var(--bg2); border: 0.5px solid var(--border2);
+    border-radius: var(--rad); font-size: 14px;
+    color: var(--txt); font-family: inherit;
+  }
+  .form-input:focus { outline: none; border-color: var(--c1); }
+  .cat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; margin-top: 4px;
+  }
+  .cat-btn {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 10px 4px;
+    background: var(--bg2); border: 1.5px solid transparent;
+    border-radius: var(--rad); cursor: pointer;
+    font-size: 11px; color: var(--txt2);
+    transition: all 0.15s;
+  }
+  .cat-btn.selected {
+    border-color: var(--c1);
+    background: var(--c1l);
+    color: var(--c1d);
+  }
+  .cat-btn i { font-size: 20px; }
+  .submit-btn {
+    width: 100%; padding: 13px;
+    background: var(--c1); border: none;
+    border-radius: var(--radlg); color: white;
+    font-size: 15px; font-weight: 500; cursor: pointer;
+    font-family: inherit; margin-top: 8px;
+  }
+  .amount-input-big {
+    width: 100%; padding: 12px;
+    background: var(--bg2); border: 0.5px solid var(--border2);
+    border-radius: var(--rad); font-size: 28px; font-weight: 500;
+    color: var(--txt); font-family: inherit; text-align: center;
+  }
+  .amount-input-big:focus { outline: none; border-color: var(--c1); }
+
+  .chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .chip {
+    padding: 5px 12px; border-radius: 20px;
+    background: var(--bg2); border: 0.5px solid var(--border);
+    font-size: 12px; color: var(--txt2); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip.sel { background: var(--c1l); color: var(--c1d); border-color: var(--c1); }
+
+  .detail-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 16px; background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .detail-amount { font-size: 28px; font-weight: 500; color: var(--cdanger); }
+  .detail-meta { font-size: 13px; color: var(--txt2); margin-top: 2px; }
+  .detail-row {
+    display: flex; justify-content: space-between;
+    padding: 12px 0; border-bottom: 0.5px solid var(--border);
+    font-size: 14px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-key { color: var(--txt2); }
+  .tag {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 12px;
+  }
+
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--txt3);
+  }
+  .empty-state i { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-state p { font-size: 14px; }
+
+  select.form-input option { background: var(--bg); color: var(--txt); }
+</style>
+
+<h2 class="sr-only">Приложение для учёта хозяйственных расходов</h2>
+<div class="app" id="app">
+
+  <div class="screen active" id="screen-home">
+    <div class="status-bar">
+      <span style="font-weight:500">9:41</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <i class="ti ti-wifi" style="font-size:14px"></i>
+        <i class="ti ti-battery-2" style="font-size:14px"></i>
+      </div>
+    </div>
+    <div class="scroll-area">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <div style="font-size:13px;color:var(--txt2)">Добрый день 👋</div>
+          <div style="font-size:18px;font-weight:500">Учёт расходов</div>
+        </div>
+        <button class="header-action" onclick="goTo('screen-stats')" aria-label="Статистика">
+          <i class="ti ti-chart-pie" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-label">Расходы за май</div>
+        <div class="summary-amount" id="total-display">47 850 ₸</div>
+        <div class="summary-sub">из 80 000 ₸ бюджета</div>
+        <div class="summary-row">
+          <div class="summary-mini">
+            <div class="lbl">Сегодня</div>
+            <div class="val" id="today-display">3 200 ₸</div>
+          </div>
+          <div class="summary-mini">
+            <div class="lbl">Осталось</div>
+            <div class="val" id="left-display">32 150 ₸</div>
+          </div>
+          <div class="summary-mini">
+            <div class="lbl">Записей</div>
+            <div class="val" id="count-display">12</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Последние расходы</div>
+      <div id="expense-list"></div>
+    </div>
+
+    <button class="fab" onclick="goTo('screen-add')" aria-label="Добавить расход">
+      <i class="ti ti-plus" aria-hidden="true"></i>
+    </button>
+
+    <div class="nav-bar">
+      <button class="nav-btn active" onclick="goTo('screen-home')"><i class="ti ti-home" aria-hidden="true"></i>Главная</button>
+      <button class="nav-btn" onclick="goTo('screen-history')"><i class="ti ti-list" aria-hidden="true"></i>История</button>
+      <button class="nav-btn" onclick="goTo('screen-budget')"><i class="ti ti-target" aria-hidden="true"></i>Бюджет</button>
+      <button class="nav-btn" onclick="goTo('screen-stats')"><i class="ti ti-chart-bar" aria-hidden="true"></i>Статистика</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-add">
+    <div class="status-bar">
+      <span style="font-weight:500">9:41</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <i class="ti ti-wifi" style="font-size:14px"></i>
+        <i class="ti ti-battery-2" style="font-size:14px"></i>
+      </div>
+    </div>
+    <div class="header">
+      <button class="header-back" onclick="goBack()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+      <span class="header-title">Новый расход</span>
+    </div>
+    <div class="scroll-area">
+      <div class="form-group">
+        <div class="form-label">Сумма</div>
+        <input class="amount-input-big" type="number" id="inp-amount" placeholder="0" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Категория</div>
+        <div class="cat-grid" id="cat-grid"></div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Название</div>
+        <input class="form-input" type="text" id="inp-name" placeholder="Например: Молоко, хлеб">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Дата</div>
+        <input class="form-input" type="date" id="inp-date">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Магазин / место</div>
+        <input class="form-input" type="text" id="inp-place" placeholder="Магазин, рынок...">
+      </div>
+      <div class="form-group">
+        <div class="form-label">Метод оплаты</div>
+        <div class="chip-row" id="pay-chips"></div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">Комментарий</div>
+        <input class="form-input" type="text" id="inp-note" placeholder="Дополнительная заметка">
+      </div>
+      <button class="submit-btn" onclick="submitExpense()">
+        <i class="ti ti-check" aria-hidden="true" style="margin-right:6px"></i>Сохранить расход
+      </button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-history">
+    <div class="status-bar">
+      <span style="font-weight:500">9:41</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <i class="ti ti-wifi" style="font-size:14px"></i>
+        <i class="ti ti-battery-2" style="font-size:14px"></i>
+      </div>
+    </div>
+    <div class="header">
+      <button class="header-back" onclick="goTo('screen-home')" aria-label="Главная"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+      <span class="header-title">История</span>
+      <button class="header-action" onclick="toggleFilter()" aria-label="Фильтр">
+        <i class="ti ti-filter" id="filter-icon" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div id="filter-panel" style="display:none;padding:12px 16px;background:var(--bg);border-bottom:0.5px solid var(--border)">
+      <div class="chip-row" id="filter-chips"></div>
+    </div>
+    <div class="scroll-area" id="history-list"></div>
+    <div class="nav-bar">
+      <button class="nav-btn" onclick="goTo('screen-home')"><i class="ti ti-home" aria-hidden="true"></i>Главная</button>
+      <button class="nav-btn active" onclick="goTo('screen-history')"><i class="ti ti-list" aria-hidden="true"></i>История</button>
+      <button class="nav-btn" onclick="goTo('screen-budget')"><i class="ti ti-target" aria-hidden="true"></i>Бюджет</button>
+      <button class="nav-btn" onclick="goTo('screen-stats')"><i class="ti ti-chart-bar" aria-hidden="true"></i>Статистика</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-detail">
+    <div class="status-bar">
+      <span style="font-weight:500">9:41</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <i class="ti ti-wifi" style="font-size:14px"></i>
+        <i class="ti ti-battery-2" style="font-size:14px"></i>
+      </div>
+    </div>
+    <div class="header">
+      <button class="header-back" onclick="goBack()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+      <span class="header-title">Детали</span>
+      <button class="header-action" onclick="deleteCurrentExpense()" aria-label="Удалить" style="background:var(--cdangerl);color:var(--cdanger)">
+        <i class="ti ti-trash" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div id="detail-content" class="scroll-area"></div>
+  </div>
+
+  <div class="screen" id="screen-budget">
+    <div class="status-bar">
+      <span style="font-weight:500">9:41</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <i class="ti ti-wifi" style="font-size:14px"></i>
+        <i class="ti ti-battery-2" style="font-size:14px"></i>
+      </div>
+    </div>
+    <div class="header">
+      <button class="header-back" onclick="goTo('screen-home')" aria-label="Главная"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+      <span class="header-title">Бюджет</span>
+    </div>
+    <div class="scroll-area" id="budget-content"></div>
+    <div class="nav-bar">
+      <button class="nav-btn" onclick="goTo('screen-home')"><i class="ti ti-home" aria-hidden="true"></i>Главная</button>
+      <button class="nav-btn" onclick="goTo('screen-history')"><i class="ti ti-list" aria-hidden="true"></i>История</button>
+      <button class="nav-btn active" onclick="goTo('screen-budget')"><i class="ti ti-target" aria-hidden="true"></i>Бюджет</button>
+      <button class="nav-btn" onclick="goTo('screen-stats')"><i class="ti ti-chart-bar" aria-hidden="true"></i>Статистика</button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-stats">
+    <div class="status-bar">
+      <span style="font-weight:500">9:41</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <i class="ti ti-wifi" style="font-size:14px"></i>
+        <i class="ti ti-battery-2" style="font-size:14px"></i>
+      </div>
+    </div>
+    <div class="header">
+      <button class="header-back" onclick="goTo('screen-home')" aria-label="Главная"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+      <span class="header-title">Статистика</span>
+    </div>
+    <div class="scroll-area" id="stats-content"></div>
+    <div class="nav-bar">
+      <button class="nav-btn" onclick="goTo('screen-home')"><i class="ti ti-home" aria-hidden="true"></i>Главная</button>
+      <button class="nav-btn" onclick="goTo('screen-history')"><i class="ti ti-list" aria-hidden="true"></i>История</button>
+      <button class="nav-btn" onclick="goTo('screen-budget')"><i class="ti ti-target" aria-hidden="true"></i>Бюджет</button>
+      <button class="nav-btn active" onclick="goTo('screen-stats')"><i class="ti ti-chart-bar" aria-hidden="true"></i>Статистика</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CATS = [
+  { id:'food',    label:'Продукты', icon:'ti-shopping-cart',  color:'#1D9E75', bg:'#E1F5EE' },
+  { id:'home',    label:'Дом',      icon:'ti-home-2',         color:'#378ADD', bg:'#E6F1FB' },
+  { id:'util',    label:'Комуналка',icon:'ti-bolt',           color:'#BA7517', bg:'#FAEEDA' },
+  { id:'health',  label:'Здоровье', icon:'ti-heart',          color:'#E24B4A', bg:'#FCEBEB' },
+  { id:'kids',    label:'Дети',     icon:'ti-mood-happy',     color:'#7F77DD', bg:'#EEEDFE' },
+  { id:'pet',     label:'Питомцы',  icon:'ti-paw',            color:'#D4537E', bg:'#FBEAF0' },
+  { id:'garden',  label:'Сад',      icon:'ti-plant-2',        color:'#3B6D11', bg:'#EAF3DE' },
+  { id:'other',   label:'Прочее',   icon:'ti-dots',           color:'#5F5E5A', bg:'#F1EFE8' },
+];
+
+const PAY_METHODS = ['Наличные','Карта','Kaspi','Каспи Голд'];
+
+const BUDGETS = {
+  food: 25000, home: 15000, util: 12000,
+  health: 8000, kids: 10000, pet: 5000, garden: 3000, other: 5000
+};
+
+let expenses = [
+  {id:1, cat:'food', name:'Продукты на неделю', amount:12500, date:'2025-05-23', place:'Magnum', pay:'Карта', note:''},
+  {id:2, cat:'util', name:'Электричество', amount:8400, date:'2025-05-22', place:'Портал гос.услуг', pay:'Kaspi', note:''},
+  {id:3, cat:'home', name:'Чистящие средства', amount:3200, date:'2025-05-22', place:'Fix Price', pay:'Наличные', note:'Дополнительный запас'},
+  {id:4, cat:'health', name:'Аптека', amount:4750, date:'2025-05-21', place:'Europharma', pay:'Карта', note:'Витамины и жаропонижающее'},
+  {id:5, cat:'food', name:'Молоко, хлеб', amount:1850, date:'2025-05-21', place:'АПК', pay:'Наличные', note:''},
+  {id:6, cat:'kids', name:'Школьные принадлежности', amount:6200, date:'2025-05-20', place:'Канцмаг', pay:'Карта', note:''},
+  {id:7, cat:'garden', name:'Удобрения', amount:2100, date:'2025-05-19', place:'ОБИ', pay:'Карта', note:''},
+  {id:8, cat:'home', name:'Лампочки LED', amount:1800, date:'2025-05-18', place:'Технодом', pay:'Наличные', note:''},
+  {id:9, cat:'food', name:'Мясо на базаре', amount:4500, date:'2025-05-17', place:'Центральный рынок', pay:'Наличные', note:'Баранина 2 кг'},
+  {id:10, cat:'pet', name:'Корм для кошки', amount:2550, date:'2025-05-16', place:'Зоомагазин', pay:'Карта', note:''},
+];
+
+let nextId = 11;
+let selectedCat = 'food';
+let selectedPay = 'Наличные';
+let navHistory = ['screen-home'];
+let detailExpenseId = null;
+let filterCat = null;
+
+function fmt(n) { return Math.round(n).toLocaleString('ru-RU') + ' ₸'; }
+
+function catById(id) { return CATS.find(c => c.id === id) || CATS[7]; }
+
+function goTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  if (navHistory[navHistory.length-1] !== screenId) navHistory.push(screenId);
+  if (screenId === 'screen-home') renderHome();
+  if (screenId === 'screen-history') renderHistory();
+  if (screenId === 'screen-budget') renderBudget();
+  if (screenId === 'screen-stats') renderStats();
+  if (screenId === 'screen-add') initAddForm();
+}
+
+function goBack() {
+  navHistory.pop();
+  const prev = navHistory[navHistory.length - 1] || 'screen-home';
+  goTo(prev);
+}
+
+function totalMonth() { return expenses.reduce((s,e) => s + e.amount, 0); }
+function todayTotal() {
+  const t = new Date().toISOString().split('T')[0];
+  return expenses.filter(e => e.date === t).reduce((s,e) => s + e.amount, 0);
+}
+const MONTH_BUDGET = 80000;
+
+function renderHome() {
+  document.getElementById('total-display').textContent = fmt(totalMonth());
+  document.getElementById('today-display').textContent = fmt(todayTotal());
+  document.getElementById('left-display').textContent = fmt(Math.max(0, MONTH_BUDGET - totalMonth()));
+  document.getElementById('count-display').textContent = expenses.length;
+  const sorted = [...expenses].sort((a,b) => b.date.localeCompare(a.date)).slice(0,5);
+  const el = document.getElementById('expense-list');
+  if (!sorted.length) { el.innerHTML = '<div class="empty-state"><i class="ti ti-receipt-off"></i><p>Пока нет расходов</p></div>'; return; }
+  el.innerHTML = sorted.map(e => expenseItemHTML(e, true)).join('');
+}
+
+function expenseItemHTML(e, clickable) {
+  const cat = catById(e.cat);
+  return `<div class="expense-item" ${clickable ? `onclick="showDetail(${e.id})"` : ''}>
+    <div class="cat-icon" style="background:${cat.bg};color:${cat.color}">
+      <i class="ti ${cat.icon}" aria-hidden="true"></i>
+    </div>
+    <div class="expense-info">
+      <div class="expense-name">${e.name}</div>
+      <div class="expense-meta">${cat.label} · ${e.date.slice(5).replace('-','.')}</div>
+    </div>
+    <div class="expense-amount">-${fmt(e.amount)}</div>
+  </div>`;
+}
+
+function showDetail(id) {
+  detailExpenseId = id;
+  const e = expenses.find(x => x.id === id);
+  if (!e) return;
+  const cat = catById(e.cat);
+  const pay = e.pay || 'Наличные';
+  document.getElementById('detail-content').innerHTML = `
+    <div style="text-align:center;padding:24px 16px;border-bottom:0.5px solid var(--border)">
+      <div class="cat-icon" style="width:56px;height:56px;border-radius:14px;font-size:26px;background:${cat.bg};color:${cat.color};margin:0 auto 12px">
+        <i class="ti ${cat.icon}" aria-hidden="true"></i>
+      </div>
+      <div style="font-size:14px;color:var(--txt2);margin-bottom:4px">${cat.label}</div>
+      <div class="detail-amount">-${fmt(e.amount)}</div>
+      <div class="detail-meta">${e.name}</div>
+    </div>
+    <div style="padding:0 16px">
+      <div class="detail-row"><span class="detail-key">Дата</span><span>${e.date}</span></div>
+      <div class="detail-row"><span class="detail-key">Место</span><span>${e.place || '—'}</span></div>
+      <div class="detail-row"><span class="detail-key">Оплата</span>
+        <span class="tag" style="background:var(--cbluel);color:var(--cblue)">${pay}</span>
+      </div>
+      ${e.note ? `<div class="detail-row"><span class="detail-key">Заметка</span><span style="color:var(--txt2)">${e.note}</span></div>` : ''}
+    </div>`;
+  navHistory.push('screen-detail');
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-detail').classList.add('active');
+}
+
+function deleteCurrentExpense() {
+  if (detailExpenseId === null) return;
+  expenses = expenses.filter(e => e.id !== detailExpenseId);
+  goBack();
+}
+
+function initAddForm() {
+  selectedCat = 'food';
+  selectedPay = 'Наличные';
+  document.getElementById('inp-amount').value = '';
+  document.getElementById('inp-name').value = '';
+  document.getElementById('inp-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('inp-place').value = '';
+  document.getElementById('inp-note').value = '';
+  document.getElementById('cat-grid').innerHTML = CATS.map(c =>
+    `<button class="cat-btn${c.id===selectedCat?' selected':''}" onclick="selectCat('${c.id}')" aria-label="${c.label}">
+      <i class="ti ${c.icon}" style="color:${c.color}" aria-hidden="true"></i>${c.label}
+    </button>`
+  ).join('');
+  document.getElementById('pay-chips').innerHTML = PAY_METHODS.map(p =>
+    `<div class="chip${p===selectedPay?' sel':''}" onclick="selectPay('${p}')">${p}</div>`
+  ).join('');
+}
+
+function selectCat(id) {
+  selectedCat = id;
+  document.querySelectorAll('#cat-grid .cat-btn').forEach(b => {
+    b.classList.toggle('selected', b.getAttribute('onclick').includes(`'${id}'`));
+  });
+}
+
+function selectPay(p) {
+  selectedPay = p;
+  document.querySelectorAll('#pay-chips .chip').forEach(c => {
+    c.classList.toggle('sel', c.textContent === p);
+  });
+}
+
+function submitExpense() {
+  const amount = parseFloat(document.getElementById('inp-amount').value);
+  const name = document.getElementById('inp-name').value.trim();
+  if (!amount || amount <= 0) { alert('Введите сумму'); return; }
+  if (!name) { alert('Введите название'); return; }
+  expenses.unshift({
+    id: nextId++,
+    cat: selectedCat,
+    name,
+    amount,
+    date: document.getElementById('inp-date').value,
+    place: document.getElementById('inp-place').value.trim(),
+    pay: selectedPay,
+    note: document.getElementById('inp-note').value.trim()
+  });
+  goTo('screen-home');
+}
+
+function renderHistory() {
+  const chips = document.getElementById('filter-chips');
+  chips.innerHTML = `<div class="chip${!filterCat?' sel':''}" onclick="setFilter(null)">Все</div>` +
+    CATS.map(c => `<div class="chip${filterCat===c.id?' sel':''}" onclick="setFilter('${c.id}')">${c.label}</div>`).join('');
+
+  const filtered = filterCat ? expenses.filter(e => e.cat === filterCat) : expenses;
+  const sorted = [...filtered].sort((a,b) => b.date.localeCompare(a.date));
+  const el = document.getElementById('history-list');
+  if (!sorted.length) {
+    el.innerHTML = '<div class="empty-state"><i class="ti ti-receipt-off"></i><p>Нет расходов</p></div>';
+    return;
+  }
+  let html = '', lastDate = '';
+  for (const e of sorted) {
+    if (e.date !== lastDate) {
+      const d = new Date(e.date);
+      const label = d.toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+      html += `<div class="section-title" style="margin-top:${lastDate?'16px':'0'};margin-bottom:8px">${label}</div>`;
+      lastDate = e.date;
+    }
+    html += expenseItemHTML(e, true);
+  }
+  el.innerHTML = html;
+}
+
+function setFilter(cat) {
+  filterCat = cat;
+  renderHistory();
+}
+
+function toggleFilter() {
+  const p = document.getElementById('filter-panel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+}
+
+function renderBudget() {
+  const spent = {};
+  CATS.forEach(c => { spent[c.id] = 0; });
+  expenses.forEach(e => { if (spent[e.cat] !== undefined) spent[e.cat] += e.amount; });
+
+  const totalBudget = Object.values(BUDGETS).reduce((a,b)=>a+b,0);
+  const totalSpent = Object.values(spent).reduce((a,b)=>a+b,0);
+  const pct = Math.min(100, Math.round(totalSpent / totalBudget * 100));
+  const barColor = pct > 85 ? 'var(--cdanger)' : pct > 65 ? 'var(--camber)' : 'var(--c1)';
+
+  let html = `<div class="stats-card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <span style="font-size:14px;font-weight:500">Общий бюджет</span>
+      <span style="font-size:12px;color:var(--txt2)">${fmt(totalSpent)} / ${fmt(totalBudget)}</span>
+    </div>
+    <div class="progress-bar" style="margin-top:10px">
+      <div class="progress-fill" style="width:${pct}%;background:${barColor}"></div>
+    </div>
+    <div style="font-size:12px;color:var(--txt2);margin-top:6px">Использовано ${pct}% · осталось ${fmt(totalBudget-totalSpent)}</div>
+  </div>
+  <div class="section-title">По категориям</div>`;
+
+  CATS.forEach(cat => {
+    const budget = BUDGETS[cat.id];
+    const s = spent[cat.id] || 0;
+    const p = Math.min(100, Math.round(s / budget * 100));
+    const bc = p > 85 ? 'var(--cdanger)' : p > 65 ? 'var(--camber)' : cat.color;
+    html += `<div class="budget-item">
+      <div class="budget-header">
+        <div class="cat-icon" style="width:36px;height:36px;border-radius:8px;font-size:16px;background:${cat.bg};color:${cat.color}">
+          <i class="ti ${cat.icon}" aria-hidden="true"></i>
+        </div>
+        <div class="budget-info">
+          <div class="budget-name">${cat.label}</div>
+          <div class="budget-vals">${fmt(s)} из ${fmt(budget)}</div>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:${bc}">${p}%</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${p}%;background:${bc}"></div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('budget-content').innerHTML = html;
+}
+
+function renderStats() {
+  const byMonth = {};
+  const byDow = [0,0,0,0,0,0,0];
+  const byCat = {};
+  CATS.forEach(c => { byCat[c.id] = 0; });
+  expenses.forEach(e => {
+    const m = e.date.slice(0,7);
+    byMonth[m] = (byMonth[m]||0) + e.amount;
+    const d = new Date(e.date).getDay();
+    byDow[d] += e.amount;
+    if (byCat[e.cat] !== undefined) byCat[e.cat] += e.amount;
+  });
+
+  const months = Object.keys(byMonth).sort().slice(-6);
+  const maxM = Math.max(...months.map(m => byMonth[m]), 1);
+  const dowNames = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const maxD = Math.max(...byDow, 1);
+
+  const total = Object.values(byCat).reduce((a,b)=>a+b,0)||1;
+  const sorted = [...CATS].sort((a,b) => byCat[b.id]-byCat[a.id]).slice(0,5);
+
+  const svgPie = buildPie(sorted, byCat);
+
+  const monthBars = months.map(m => {
+    const h = Math.round(byCat[m]||byMonth[m]||0);
+    const hpx = Math.round((byMonth[m]/maxM)*72);
+    const label = m.slice(5);
+    return `<div class="bar-wrap">
+      <div class="bar" style="height:${hpx}px;background:var(--c1);opacity:0.85"></div>
+      <div class="bar-lbl">${label}</div>
+    </div>`;
+  }).join('');
+
+  const dowBars = byDow.map((v,i) => {
+    const hpx = Math.round((v/maxD)*72);
+    return `<div class="bar-wrap">
+      <div class="bar" style="height:${hpx||4}px;background:#378ADD;opacity:0.8"></div>
+      <div class="bar-lbl">${dowNames[i]}</div>
+    </div>`;
+  }).join('');
+
+  const html = `
+  <div class="stats-card">
+    <div style="font-size:14px;font-weight:500;margin-bottom:4px">Расходы по месяцам</div>
+    <div style="font-size:12px;color:var(--txt2)">Последние 6 месяцев</div>
+    <div class="chart-bars">${monthBars}</div>
+  </div>
+  <div class="stats-card">
+    <div style="font-size:14px;font-weight:500;margin-bottom:4px">По дням недели</div>
+    <div style="font-size:12px;color:var(--txt2)">Когда тратите больше</div>
+    <div class="chart-bars">${dowBars}</div>
+  </div>
+  <div class="stats-card">
+    <div style="font-size:14px;font-weight:500;margin-bottom:2px">По категориям</div>
+    <div class="pie-wrap">
+      ${svgPie}
+      <div class="legend">${sorted.map(c => {
+        const pct = total > 0 ? Math.round(byCat[c.id]/total*100) : 0;
+        return `<div class="legend-item">
+          <div class="legend-dot" style="background:${c.color}"></div>
+          <span class="legend-name">${c.label}</span>
+          <span class="legend-pct">${pct}%</span>
+        </div>`;
+      }).join('')}</div>
+    </div>
+  </div>`;
+  document.getElementById('stats-content').innerHTML = html;
+}
+
+function buildPie(cats, byCat) {
+  const total = cats.reduce((s,c) => s + byCat[c.id], 0) || 1;
+  let angle = -Math.PI/2;
+  const R = 50, cx = 56, cy = 56;
+  let paths = '';
+  cats.forEach(c => {
+    const slice = (byCat[c.id]/total) * 2 * Math.PI;
+    if (slice < 0.01) return;
+    const x1 = cx + R*Math.cos(angle), y1 = cy + R*Math.sin(angle);
+    const x2 = cx + R*Math.cos(angle+slice), y2 = cy + R*Math.sin(angle+slice);
+    const large = slice > Math.PI ? 1 : 0;
+    paths += `<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${R},${R} 0 ${large},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${c.color}" stroke="var(--bg)" stroke-width="2"/>`;
+    angle += slice;
+  });
+  return `<svg class="pie-chart" width="112" height="112" viewBox="0 0 112 112" aria-hidden="true"><circle cx="56" cy="56" r="50" fill="var(--bg3)"/>${paths}<circle cx="56" cy="56" r="22" fill="var(--bg)"/></svg>`;
+}
+
+renderHome();
+initAddForm();
+</script>
