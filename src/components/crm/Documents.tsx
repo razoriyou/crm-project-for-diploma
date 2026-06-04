@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Button, Table, Typography, Alert, Space, Upload, Spin, Empty, Tooltip, Tag,
+  Button, Table, Typography, Alert, Space, Upload, Spin, Empty, Tag, Dropdown, Modal, message,
 } from 'antd';
+import type { MenuProps } from 'antd';
 import {
-  CloudUploadOutlined, LinkOutlined, ReloadOutlined,
+  CloudUploadOutlined, ReloadOutlined,
   FileTextOutlined, FileImageOutlined, FilePdfOutlined,
   FileExcelOutlined, FileWordOutlined, FolderOutlined, FileUnknownOutlined,
+  MoreOutlined, LinkOutlined, DownloadOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -41,7 +43,11 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-const COLUMNS = (onOpen: (file: DriveFile) => void) => [
+const COLUMNS = (
+  onOpen: (file: DriveFile) => void,
+  onDownload: (file: DriveFile) => void,
+  onDelete: (file: DriveFile) => void,
+) => [
   {
     title: 'Название',
     dataIndex: 'name',
@@ -71,11 +77,35 @@ const COLUMNS = (onOpen: (file: DriveFile) => void) => [
     title: '',
     key: 'actions',
     width: 56,
-    render: (_: unknown, file: DriveFile) => (
-      <Tooltip title="Открыть в Google Drive">
-        <Button type="text" icon={<LinkOutlined />} onClick={() => onOpen(file)} />
-      </Tooltip>
-    ),
+    render: (_: unknown, file: DriveFile) => {
+      const items: MenuProps['items'] = [
+        {
+          key: 'open',
+          icon: <LinkOutlined />,
+          label: 'Открыть в Drive',
+          onClick: () => onOpen(file),
+        },
+        {
+          key: 'download',
+          icon: <DownloadOutlined />,
+          label: 'Скачать',
+          onClick: () => onDownload(file),
+        },
+        { type: 'divider' },
+        {
+          key: 'delete',
+          icon: <DeleteOutlined />,
+          label: 'Удалить',
+          danger: true,
+          onClick: () => onDelete(file),
+        },
+      ];
+      return (
+        <Dropdown menu={{ items }} trigger={['click']} placement="bottomRight">
+          <Button type="text" icon={<MoreOutlined />} />
+        </Dropdown>
+      );
+    },
   },
 ];
 
@@ -99,6 +129,33 @@ const Documents: React.FC = () => {
   useEffect(() => {
     loadFiles().finally(() => setLoading(false));
   }, [loadFiles]);
+
+  const handleDownload = (file: DriveFile) => {
+    const a = document.createElement('a');
+    a.href = `/api/drive/files/${file.id}/download`;
+    a.download = file.name;
+    a.click();
+  };
+
+  const handleDelete = (file: DriveFile) => {
+    Modal.confirm({
+      title: 'Удалить файл?',
+      content: `«${file.name}» будет удалён из Google Drive без возможности восстановления.`,
+      okText: 'Удалить',
+      okButtonProps: { danger: true },
+      cancelText: 'Отмена',
+      onOk: async () => {
+        try {
+          const res = await fetch(`/api/drive/files/${file.id}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('Ошибка при удалении файла');
+          message.success('Файл удалён');
+          await loadFiles();
+        } catch (e: any) {
+          message.error(e.message);
+        }
+      },
+    });
+  };
 
   const handleUpload = async (file: File) => {
     setUploading(true);
@@ -160,7 +217,11 @@ const Documents: React.FC = () => {
 
       <Table
         dataSource={files}
-        columns={COLUMNS((f) => window.open(f.webViewLink, '_blank'))}
+        columns={COLUMNS(
+          (f) => window.open(f.webViewLink, '_blank'),
+          handleDownload,
+          handleDelete,
+        )}
         rowKey="id"
         locale={{ emptyText: <Empty description="Файлы не найдены" /> }}
         pagination={{ pageSize: 20, showSizeChanger: false, hideOnSinglePage: true }}

@@ -1,25 +1,27 @@
 require('dotenv').config();
-const express  = require('express');
-const path     = require('path');
-const session  = require('express-session');
-const multer   = require('multer');
-const { google } = require('googleapis');
-const { Readable } = require('stream');
+const express        = require('express');
+const path           = require('path');
+const multer         = require('multer');
+const { google }     = require('googleapis');
+const { Readable }   = require('stream');
+const { getIronSession } = require('iron-session');
 
 const app    = express();
-const PORT   = process.env.PORT || 3000;
+const PORT   = process.env.PORT || 4000;
 const upload = multer({ storage: multer.memoryStorage() });
 
 app.use(express.json());
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'crm-dev-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+
+const SESSION_OPTIONS = {
+  cookieName: 'crm_session',
+  password:   process.env.SESSION_SECRET,
+  cookieOptions: {
+    secure:   process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge:   60 * 60 * 24 * 7,
   },
-}));
+};
 
 function makeOAuth2Client() {
   return new google.auth.OAuth2(
@@ -29,21 +31,12 @@ function makeOAuth2Client() {
   );
 }
 
-function getDriveClient(req) {
-  const auth = makeOAuth2Client();
-  auth.setCredentials(req.session.googleTokens);
-  auth.on('tokens', (tokens) => {
-    req.session.googleTokens = { ...req.session.googleTokens, ...tokens };
-  });
-  return google.drive({ version: 'v3', auth });
-}
-
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 app.get('/api/auth/google', (_req, res) => {
   const url = makeOAuth2Client().generateAuthUrl({
     access_type: 'offline',
-    prompt: 'consent',
+    prompt:      'consent',
     scope: [
       'https://www.googleapis.com/auth/drive',
       'https://www.googleapis.com/auth/userinfo.profile',
@@ -62,29 +55,43 @@ app.get('/api/auth/callback', async (req, res) => {
     const oauth2   = google.oauth2({ version: 'v2', auth });
     const { data } = await oauth2.userinfo.get();
 
-    req.session.googleTokens = tokens;
-    req.session.user = { name: data.name, email: data.email, picture: data.picture };
-    req.session.save(() => res.redirect('/?auth=success'));
-  } catch {
+    const session = await getIronSession(req, res, SESSION_OPTIONS);
+    session.googleTokens = tokens;
+    session.user = { name: data.name, email: data.email, picture: data.picture };
+    await session.save();
+
+    res.redirect('/?auth=success');
+  } catch (err) {
+    console.error('Auth callback error:', err.message);
     res.redirect('/?auth=error');
   }
 });
 
-app.get('/api/auth/status', (req, res) => {
-  res.json({ connected: !!req.session.googleTokens, user: req.session.user ?? null });
+app.get('/api/auth/status', async (req, res) => {
+  const session = await getIronSession(req, res, SESSION_OPTIONS);
+  res.json({ connected: !!session.googleTokens, user: session.user ?? null });
 });
 
-app.delete('/api/auth/google', (req, res) => {
-  delete req.session.googleTokens;
+app.delete('/api/auth/google', async (req, res) => {
+  const session = await getIronSession(req, res, SESSION_OPTIONS);
+  session.destroy();
   res.json({ ok: true });
 });
 
 // ── Drive ─────────────────────────────────────────────────────────────────────
 
 app.get('/api/drive/files', async (req, res) => {
-  if (!req.session.googleTokens) return res.status(401).json({ error: 'Not authenticated' });
+  const session = await getIronSession(req, res, SESSION_OPTIONS);
+  if (!session.googleTokens) return res.status(401).json({ error: 'Not authenticated' });
+
   try {
-    const drive    = getDriveClient(req);
+    const auth = makeOAuth2Client();
+    auth.setCredentials(session.googleTokens);
+    auth.on('tokens', async (tokens) => {
+      session.googleTokens = { ...session.googleTokens, ...tokens };
+      await session.save();
+    });
+    const drive    = google.drive({ version: 'v3', auth });
     const response = await drive.files.list({
       pageSize: 100,
       fields:   'files(id,name,mimeType,modifiedTime,size,webViewLink)',
@@ -98,10 +105,14 @@ app.get('/api/drive/files', async (req, res) => {
 });
 
 app.post('/api/drive/upload', upload.single('file'), async (req, res) => {
-  if (!req.session.googleTokens) return res.status(401).json({ error: 'Not authenticated' });
-  if (!req.file)                 return res.status(400).json({ error: 'No file provided' });
+  const session = await getIronSession(req, res, SESSION_OPTIONS);
+  if (!session.googleTokens) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.file)             return res.status(400).json({ error: 'No file provided' });
+
   try {
-    const drive  = getDriveClient(req);
+    const auth = makeOAuth2Client();
+    auth.setCredentials(session.googleTokens);
+    const drive  = google.drive({ version: 'v3', auth });
     const stream = new Readable();
     stream.push(req.file.buffer);
     stream.push(null);
@@ -111,6 +122,38 @@ app.post('/api/drive/upload', upload.single('file'), async (req, res) => {
       fields:      'id,name,mimeType,modifiedTime,size,webViewLink',
     });
     res.json(response.data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/drive/files/:id', async (req, res) => {
+  const session = await getIronSession(req, res, SESSION_OPTIONS);
+  if (!session.googleTokens) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const auth = makeOAuth2Client();
+    auth.setCredentials(session.googleTokens);
+    const drive = google.drive({ version: 'v3', auth });
+    await drive.files.delete({ fileId: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/drive/files/:id/download', async (req, res) => {
+  const session = await getIronSession(req, res, SESSION_OPTIONS);
+  if (!session.googleTokens) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const auth = makeOAuth2Client();
+    auth.setCredentials(session.googleTokens);
+    const drive = google.drive({ version: 'v3', auth });
+    const meta = await drive.files.get({ fileId: req.params.id, fields: 'name,mimeType' });
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(meta.data.name)}`);
+    const dl = await drive.files.get({ fileId: req.params.id, alt: 'media' }, { responseType: 'stream' });
+    dl.data.pipe(res);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
