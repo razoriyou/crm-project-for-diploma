@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Card, Typography } from 'antd';
+import { Card, Typography } from 'antd';
 import { GoogleOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
