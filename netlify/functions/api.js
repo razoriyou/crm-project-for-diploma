@@ -169,15 +169,23 @@ app.get('/api/drive/files/:id/download', async (req, res) => {
 
     const exportInfo = WORKSPACE_EXPORTS[mimeType];
     const filename = exportInfo ? name + exportInfo.ext : name;
-    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
 
-    if (exportInfo) {
-      const dl = await drive.files.export({ fileId: req.params.id, mimeType: exportInfo.mime }, { responseType: 'stream' });
-      dl.data.pipe(res);
-    } else {
-      const dl = await drive.files.get({ fileId: req.params.id, alt: 'media' }, { responseType: 'stream' });
-      dl.data.pipe(res);
-    }
+    const dl = exportInfo
+      ? await drive.files.export({ fileId: req.params.id, mimeType: exportInfo.mime }, { responseType: 'stream' })
+      : await drive.files.get({ fileId: req.params.id, alt: 'media' }, { responseType: 'stream' });
+
+    const chunks = [];
+    await new Promise((resolve, reject) => {
+      dl.data.on('data', c => chunks.push(c));
+      dl.data.on('end', resolve);
+      dl.data.on('error', reject);
+    });
+    const buffer = Buffer.concat(chunks);
+
+    res.setHeader('Content-Type', exportInfo ? exportInfo.mime : mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
