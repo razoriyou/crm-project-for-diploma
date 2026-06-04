@@ -134,4 +134,53 @@ app.post('/api/drive/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+app.delete('/api/drive/files/:id', async (req, res) => {
+  const session = await getIronSession(req, res, SESSION_OPTIONS);
+  if (!session.googleTokens) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const { drive } = getDriveClient(session.googleTokens);
+    await drive.files.delete({ fileId: req.params.id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const WORKSPACE_EXPORTS = {
+  'application/vnd.google-apps.document':     { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  ext: '.docx' },
+  'application/vnd.google-apps.spreadsheet':  { mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',        ext: '.xlsx' },
+  'application/vnd.google-apps.presentation': { mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', ext: '.pptx' },
+  'application/vnd.google-apps.drawing':      { mime: 'application/pdf',  ext: '.pdf'  },
+  'application/vnd.google-apps.script':       { mime: 'application/json', ext: '.json' },
+};
+
+app.get('/api/drive/files/:id/download', async (req, res) => {
+  const session = await getIronSession(req, res, SESSION_OPTIONS);
+  if (!session.googleTokens) return res.status(401).json({ error: 'Not authenticated' });
+
+  try {
+    const { drive } = getDriveClient(session.googleTokens);
+    const { name, mimeType } = (await drive.files.get({ fileId: req.params.id, fields: 'name,mimeType' })).data;
+
+    if (mimeType === 'application/vnd.google-apps.folder') {
+      return res.status(400).json({ error: 'Папки нельзя скачать' });
+    }
+
+    const exportInfo = WORKSPACE_EXPORTS[mimeType];
+    const filename = exportInfo ? name + exportInfo.ext : name;
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+
+    if (exportInfo) {
+      const dl = await drive.files.export({ fileId: req.params.id, mimeType: exportInfo.mime }, { responseType: 'stream' });
+      dl.data.pipe(res);
+    } else {
+      const dl = await drive.files.get({ fileId: req.params.id, alt: 'media' }, { responseType: 'stream' });
+      dl.data.pipe(res);
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports.handler = serverless(app);

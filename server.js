@@ -142,6 +142,14 @@ app.delete('/api/drive/files/:id', async (req, res) => {
   }
 });
 
+const WORKSPACE_EXPORTS = {
+  'application/vnd.google-apps.document':     { mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',  ext: '.docx' },
+  'application/vnd.google-apps.spreadsheet':  { mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',        ext: '.xlsx' },
+  'application/vnd.google-apps.presentation': { mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', ext: '.pptx' },
+  'application/vnd.google-apps.drawing':      { mime: 'application/pdf',  ext: '.pdf'  },
+  'application/vnd.google-apps.script':       { mime: 'application/json', ext: '.json' },
+};
+
 app.get('/api/drive/files/:id/download', async (req, res) => {
   const session = await getIronSession(req, res, SESSION_OPTIONS);
   if (!session.googleTokens) return res.status(401).json({ error: 'Not authenticated' });
@@ -150,10 +158,23 @@ app.get('/api/drive/files/:id/download', async (req, res) => {
     const auth = makeOAuth2Client();
     auth.setCredentials(session.googleTokens);
     const drive = google.drive({ version: 'v3', auth });
-    const meta = await drive.files.get({ fileId: req.params.id, fields: 'name,mimeType' });
-    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(meta.data.name)}`);
-    const dl = await drive.files.get({ fileId: req.params.id, alt: 'media' }, { responseType: 'stream' });
-    dl.data.pipe(res);
+    const { name, mimeType } = (await drive.files.get({ fileId: req.params.id, fields: 'name,mimeType' })).data;
+
+    if (mimeType === 'application/vnd.google-apps.folder') {
+      return res.status(400).json({ error: 'Папки нельзя скачать' });
+    }
+
+    const exportInfo = WORKSPACE_EXPORTS[mimeType];
+    const filename = exportInfo ? name + exportInfo.ext : name;
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
+
+    if (exportInfo) {
+      const dl = await drive.files.export({ fileId: req.params.id, mimeType: exportInfo.mime }, { responseType: 'stream' });
+      dl.data.pipe(res);
+    } else {
+      const dl = await drive.files.get({ fileId: req.params.id, alt: 'media' }, { responseType: 'stream' });
+      dl.data.pipe(res);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
