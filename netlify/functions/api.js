@@ -103,6 +103,12 @@ app.get('/api/drive/files', async (req, res) => {
     });
     res.json(response.data.files);
   } catch (err) {
+    if (err.message?.includes('insufficient authentication scopes') || err.code === 403) {
+      const session = await getIronSession(req, res, SESSION_OPTIONS);
+      session.googleTokens = undefined;
+      await session.save();
+      return res.status(401).json({ error: 'insufficient_scope' });
+    }
     res.status(500).json({ error: err.message });
   }
 });

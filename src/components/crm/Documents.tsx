@@ -119,6 +119,14 @@ const Documents: React.FC = () => {
     setError(null);
     try {
       const res = await fetch('/api/drive/files');
+      if (res.status === 401) {
+        const body = await res.json().catch(() => ({}));
+        if (body.error === 'insufficient_scope') {
+          window.location.href = '/api/auth/google';
+          return;
+        }
+        throw new Error('Не авторизован');
+      }
       if (!res.ok) throw new Error('Не удалось загрузить список файлов');
       setFiles(await res.json());
     } catch (e: any) {
