@@ -44,23 +44,34 @@ app.get('/api/auth/google', (_req, res) => {
   const url = makeOAuth2Client().generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
-    scope: ['https://www.googleapis.com/auth/drive'],
+    scope: [
+      'https://www.googleapis.com/auth/drive',
+      'https://www.googleapis.com/auth/userinfo.profile',
+      'https://www.googleapis.com/auth/userinfo.email',
+    ],
   });
   res.redirect(url);
 });
 
-app.get('/api/auth/google/callback', async (req, res) => {
+app.get('/api/auth/callback', async (req, res) => {
   try {
-    const { tokens } = await makeOAuth2Client().getToken(req.query.code);
+    const auth = makeOAuth2Client();
+    const { tokens } = await auth.getToken(req.query.code);
+    auth.setCredentials(tokens);
+
+    const oauth2   = google.oauth2({ version: 'v2', auth });
+    const { data } = await oauth2.userinfo.get();
+
     req.session.googleTokens = tokens;
-    res.redirect('/?drive=connected');
+    req.session.user = { name: data.name, email: data.email, picture: data.picture };
+    req.session.save(() => res.redirect('/?auth=success'));
   } catch {
-    res.redirect('/?drive=error');
+    res.redirect('/?auth=error');
   }
 });
 
 app.get('/api/auth/status', (req, res) => {
-  res.json({ connected: !!req.session.googleTokens });
+  res.json({ connected: !!req.session.googleTokens, user: req.session.user ?? null });
 });
 
 app.delete('/api/auth/google', (req, res) => {
